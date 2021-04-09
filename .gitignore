@@ -115,3 +115,9 @@ dist
 
 # Configuration file
 config.json
+
+# Ad Network
+ads.txt
+
+# Tailwind CSS Styles
+src/content/www/static/css/styles.css

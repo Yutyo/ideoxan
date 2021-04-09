@@ -27,12 +27,8 @@ const mongoose          = require('mongoose')                   // MongoDB drive
 const passport          = require('passport')                   // User sessions, sign ups, sign ons
 const passportInit      = require('../utils/passport')          // Local passport Config
 
-/* ---------------------------------------- Localization ---------------------------------------- */
-const { I18n }          = require('i18n')                       // Localization
-
 /* ------------------------------------------- General ------------------------------------------ */
 const c                 = require('chalk')                      // Terminal coloring
-const path              = require('path')                       // Path resolution
 
 /* -------------------------------------------- Utils ------------------------------------------- */
 const { HTTPErrorPage } = require('../utils/HTTPErrors')        // HTTP Error Utils
@@ -87,27 +83,6 @@ mongoose.set('debug', (coll, method) => {                       // Sets debug lo
         'web', '→', coll
     ].join(' '))
 })
-
-/* -------------------------------------------- I18n -------------------------------------------- */
-// Internationalization and localization initialization
-// > Why a JSON object of I18n objects? 
-// Well because there are different areas in which I18n applies. For example, the locales files for
-// the website (www) are not going to be in the same area as the localization files for the editor
-// and the curriculum. They are being split up for ease. Now translation for the website can be
-// accessed via i18n.www rather than complex instances of the i18n object, or even worse, instances
-// that are separate variables
-const i18n = {
-    "www": new I18n({                                           // Creates i18n object for the website
-        "locales": cfg.server.locales.availableLangs,
-        "defaultLocale": cfg.server.locales.default,
-        "directory": path.join(__dirname, '../../', cfg.content.www.paths.locales),
-        "cookie": cfg.server.locales.cookieLangName,
-        "queryParameter": cfg.server.locales.paramName,
-        "objectNotation": true,
-        "autoReload": true,
-        "updateFiles": false,
-    })
-}
 
 /* -------------------------------------- Server Constants -------------------------------------- */
 const app = express()                                           // Creates the Express HTTP Server
@@ -195,34 +170,6 @@ app.use(helmet({
     contentSecurityPolicy: false
 }))
 
-/* ---------------------------- Internationalization And Localization --------------------------- */
-// TODO: replace with vdomain/path regex matching for certain paths (ie. www vs. editor)
-app.use(i18n.www.init)                                          // Initializes i18n website
-
-// TODO: abstract to helper i18n.js
-// Middleware for handling language selection/switching
-app.use(function (req, res, next) {
-    // Sets language query and cookie names based on config file
-    const langQuery     = req.query[cfg.server.locales.paramName]       || null
-    const langCookie    = req.cookies[cfg.server.locales.cookieName]    || null
-    if (langQuery) {                                            // Validates query
-        // If the language isn't available ignore it, move on.
-        if (!cfg.server.locales.availableLangs.includes(langQuery)) return next()
-
-        // If it is available, set the locale and cookie to the language
-        res.setLocale(langQuery)
-        res.cookie(cfg.server.locales.cookieName, langQuery)
-    } else {
-        // If the cookie isn't valid, set it to a default config language (default: en)
-        if (!langCookie) res.cookie(cfg.server.locales.cookieName, cfg.server.locales.default)
-
-        // Sets the locale
-        res.setLocale(req.cookies[cfg.server.locales.cookieName] || cfg.server.locales.default)
-    }
-
-    return next()
-})
-
 /* -------------------------------------------- Other ------------------------------------------- */
 app.use(compression())                                          // Compresses responses
 app.use(flash())                                                // Session alert messaging
@@ -265,14 +212,14 @@ app.use(require('../routes/routes'))                            // This is the m
 /* --------------------------------------------- 404 -------------------------------------------- */
 app.use(async (req, res) => {                                   // If there are no more routes to follow then
     let responseError = new HTTPErrorPage(req, res, '404')
-    return responseError.renderPage()
+    return await responseError.renderPage()
 })
 
 /* --------------------------------------------- 5xx -------------------------------------------- */
 app.use(async (err, req, res) => {                              // If there is a server side error thrown then
     console.error(err.stack)                                    // Log the error and send the response
     let responseError = new HTTPErrorPage(req, res, '500')
-    return responseError.renderPage()
+    return await responseError.renderPage()
 })
 
 
